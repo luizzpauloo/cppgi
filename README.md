@@ -1,2 +1,5 @@
 # cppgi
-Gestão Atividades CPPGI
+streamlit
+mysql-connector-python
+pandas
+plotly
