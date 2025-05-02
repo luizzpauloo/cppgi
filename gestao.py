@@ -1,22 +1,22 @@
+# gestao.py (versão para Streamlit Cloud com banco remoto)
 import streamlit as st
 import mysql.connector
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
+import os
 
-# Conectar ao banco de dados MySQL
+# Dados de conexão com MySQL remoto (ex: PlanetScale, Railway, etc.)
 conn = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="5566",
-    database="sistema_gestao"
+    host=os.getenv("DB_HOST"),
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    database=os.getenv("DB_NAME")
 )
 cursor = conn.cursor(dictionary=True)
 
-# Interface Streamlit
 st.title("Atividades")
 
-# Navegação
 aba = st.sidebar.selectbox(
     "Menu", ["Cadastrar Usuário", "Cadastrar Atividade", "Atividades Gerais"])
 
@@ -67,8 +67,6 @@ elif aba == "Cadastrar Atividade":
 
 elif aba == "Atividades Gerais":
     st.subheader("Visualização Geral das Atividades")
-
-    # Filtro por setor
     cursor.execute("SELECT * FROM setores")
     setores = cursor.fetchall()
     setor_filtro = st.selectbox(
@@ -84,24 +82,4 @@ elif aba == "Atividades Gerais":
     valores = ()
     if setor_filtro != "Todos":
         query += " WHERE s.nome = %s"
-        valores = (setor_filtro,)
-
-    cursor.execute(query, valores)
-    dados = cursor.fetchall()
-
-    if dados:
-        df = pd.DataFrame(dados)
-        df["atividade"] = df["atividade"] + " (" + df["responsavel"] + ")"
-        fig = px.timeline(df,
-                          x_start="data_inicio",
-                          x_end="data_fim",
-                          y="atividade",
-                          color="setor",
-                          title="Gráfico de Gantt das Atividades",
-                          labels={"setor": "Setor"})
-        fig.update_yaxes(categoryorder="total ascending")
-        st.plotly_chart(fig)
-    else:
-        st.info("Nenhuma atividade cadastrada.")
-
-conn.close()
+        val
