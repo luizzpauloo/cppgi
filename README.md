@@ -1,5 +1,2 @@
 # cppgi
-streamlit
-mysql-connector-python
-pandas
-plotly
+Sistema de Atividades da CPPGI do IFGoiano - Campus Campos Belos
