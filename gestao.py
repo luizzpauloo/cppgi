@@ -1,85 +1,147 @@
-# gestao.py (versão para Streamlit Cloud com banco remoto)
 import streamlit as st
-import mysql.connector
+import psycopg2
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
-import os
 
-# Dados de conexão com MySQL remoto (ex: PlanetScale, Railway, etc.)
-conn = mysql.connector.connect(
-    host=os.getenv("DB_HOST"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    database=os.getenv("DB_NAME")
-)
-cursor = conn.cursor(dictionary=True)
+# Função para conectar ao banco PostgreSQL
 
-st.title("Atividades")
 
-aba = st.sidebar.selectbox(
+def conectar():
+    return psycopg2.connect(
+        host="switchback.proxy.rlwy.net",
+        port="44848",
+        dbname="railway",
+        user="postgres",
+        password="shgtVwAjfQwFlZLLuEPZyBCEyofhJztW"  # Substitua pela senha real
+    )
+
+# Função para obter setores do banco
+
+
+def obter_setores():
+    conn = conectar()
+    cur = conn.cursor()
+    cur.execute("SELECT id, nome FROM setores ORDER BY nome")
+    setores = cur.fetchall()
+    conn.close()
+    return setores
+
+# Função para obter usuários
+
+
+def obter_usuarios():
+    conn = conectar()
+    cur = conn.cursor()
+    cur.execute("SELECT id, nome FROM usuarios ORDER BY nome")
+    usuarios = cur.fetchall()
+    conn.close()
+    return usuarios
+
+# Função para salvar usuário
+
+
+def salvar_usuario(nome, email, senha):
+    conn = conectar()
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s)", (nome, email, senha))
+    conn.commit()
+    conn.close()
+
+# Função para salvar atividade
+
+
+def salvar_atividade(nome, setor_id, data_inicio, data_fim, usuario_id):
+    conn = conectar()
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO atividades (nome, setor_id, data_inicio, data_fim, usuario_id)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (nome, setor_id, data_inicio, data_fim, usuario_id))
+    conn.commit()
+    conn.close()
+
+# Função para obter todas as atividades
+
+
+def obter_atividades(setor_id=None):
+    conn = conectar()
+    cur = conn.cursor()
+    if setor_id:
+        cur.execute("""
+            SELECT a.nome, s.nome AS setor, u.nome AS responsavel, a.data_inicio, a.data_fim
+            FROM atividades a
+            JOIN setores s ON a.setor_id = s.id
+            JOIN usuarios u ON a.usuario_id = u.id
+            WHERE s.id = %s
+            ORDER BY a.data_inicio
+        """, (setor_id,))
+    else:
+        cur.execute("""
+            SELECT a.nome, s.nome AS setor, u.nome AS responsavel, a.data_inicio, a.data_fim
+            FROM atividades a
+            JOIN setores s ON a.setor_id = s.id
+            JOIN usuarios u ON a.usuario_id = u.id
+            ORDER BY a.data_inicio
+        """)
+    dados = cur.fetchall()
+    conn.close()
+    return dados
+
+
+# Interface Streamlit
+st.set_page_config(page_title="Gestão de Atividades CGPPI 2025", layout="wide")
+st.sidebar.image("logo.png", width=200)
+st.title("Atividades CGPPI - IFGoiano - Campus Campos Belos")
+
+menu = st.sidebar.selectbox(
     "Menu", ["Cadastrar Usuário", "Cadastrar Atividade", "Atividades Gerais"])
 
-if aba == "Cadastrar Usuário":
+if menu == "Cadastrar Usuário":
     st.subheader("Novo Usuário")
     nome = st.text_input("Nome")
     email = st.text_input("Email")
     senha = st.text_input("Senha", type="password")
     if st.button("Salvar Usuário"):
-        try:
-            cursor.execute(
-                "INSERT INTO usuarios (nome, email, senha) VALUES (%s, %s, %s)", (nome, email, senha))
-            conn.commit()
-            st.success("Usuário cadastrado com sucesso!")
-        except mysql.connector.IntegrityError:
-            st.error("Erro: este e-mail já está cadastrado.")
+        salvar_usuario(nome, email, senha)
+        st.success("Usuário cadastrado com sucesso!")
 
-elif aba == "Cadastrar Atividade":
+elif menu == "Cadastrar Atividade":
     st.subheader("Nova Atividade")
-    cursor.execute("SELECT * FROM setores")
-    setores = cursor.fetchall()
-    cursor.execute("SELECT * FROM usuarios")
-    usuarios = cursor.fetchall()
+    setores = obter_setores()
+    usuarios = obter_usuarios()
 
-    if setores and usuarios:
-        setor_opcoes = {setor['nome']: setor['id'] for setor in setores}
-        usuario_opcoes = {usuario['nome']: usuario['id']
-                          for usuario in usuarios}
+    setor_dict = {nome: id for id, nome in setores}
+    usuario_dict = {nome: id for id, nome in usuarios}
 
-        setor_nome = st.selectbox("Setor", list(setor_opcoes.keys()))
-        usuario_nome = st.selectbox("Responsável", list(usuario_opcoes.keys()))
-        nome_atividade = st.text_input("Nome da Atividade")
-        data_inicio = st.date_input("Data de Início", value=datetime.today())
-        data_fim = st.date_input("Data de Término", value=datetime.today())
+    setor_nome = st.selectbox("Setor", list(setor_dict.keys()))
+    atividade_nome = st.text_input("Nome da Atividade")
+    data_inicio = st.date_input("Data de Início", datetime.today())
+    data_fim = st.date_input("Data de Término", datetime.today())
+    usuario_nome = st.selectbox("Responsável", list(usuario_dict.keys()))
 
-        if st.button("Salvar Atividade"):
-            setor_id = setor_opcoes[setor_nome]
-            usuario_id = usuario_opcoes[usuario_nome]
-            try:
-                cursor.execute("INSERT INTO atividades (nome, setor_id, data_inicio, data_fim, usuario_id) VALUES (%s, %s, %s, %s, %s)",
-                               (nome_atividade, setor_id, data_inicio, data_fim, usuario_id))
-                conn.commit()
-                st.success("Atividade cadastrada com sucesso!")
-            except mysql.connector.Error as e:
-                st.error(f"Erro ao cadastrar atividade: {e}")
-    else:
-        st.info("É necessário ter pelo menos um setor e um usuário cadastrados.")
+    if st.button("Salvar Atividade"):
+        salvar_atividade(
+            atividade_nome, setor_dict[setor_nome], data_inicio, data_fim, usuario_dict[usuario_nome])
+        st.success("Atividade cadastrada com sucesso!")
 
-elif aba == "Atividades Gerais":
-    st.subheader("Visualização Geral das Atividades")
-    cursor.execute("SELECT * FROM setores")
-    setores = cursor.fetchall()
+elif menu == "Atividades Gerais":
+    st.subheader("Visualização Geral de Atividades")
+    setores = obter_setores()
+    setor_dict = {nome: id for id, nome in setores}
     setor_filtro = st.selectbox(
-        "Filtrar por Setor", ["Todos"] + [setor['nome'] for setor in setores])
+        "Filtrar por Setor", ["Todos"] + list(setor_dict.keys()))
 
-    query = """
-        SELECT a.nome AS atividade, s.nome AS setor, u.nome AS responsavel,
-               a.data_inicio, a.data_fim
-        FROM atividades a
-        JOIN setores s ON a.setor_id = s.id
-        JOIN usuarios u ON a.usuario_id = u.id
-    """
-    valores = ()
-    if setor_filtro != "Todos":
-        query += " WHERE s.nome = %s"
-        val
+    setor_id = setor_dict[setor_filtro] if setor_filtro != "Todos" else None
+    dados = obter_atividades(setor_id)
+
+    df = pd.DataFrame(
+        dados, columns=["Atividade", "Setor", "Responsável", "Início", "Fim"])
+
+    st.dataframe(df)
+
+    fig = px.timeline(df, x_start="Início", x_end="Fim", y="Atividade", color="Setor",
+                      title="Gráfico de Gantt das Atividades")
+    fig.update_yaxes(autorange="reversed")
+    st.plotly_chart(fig, use_container_width=True)
