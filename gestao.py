@@ -9,11 +9,11 @@ from datetime import datetime
 
 def conectar():
     return psycopg2.connect(
-        host="switchback.proxy.rlwy.net",
-        port="44848",
-        dbname="railway",
-        user="postgres",
-        password="shgtVwAjfQwFlZLLuEPZyBCEyofhJztW"  # Substitua pela senha real
+        host=st.secrets["DB_HOST"],
+        port=st.secrets["DB_PORT"],
+        dbname=st.secrets["DB_NAME"],
+        user=st.secrets["DB_USER"],
+        password=st.secrets["DB_PASSWORD"]
     )
 
 # Função para obter setores do banco
