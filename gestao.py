@@ -10,7 +10,7 @@ def conectar():
         port=st.secrets["DB_PORT"],
         dbname=st.secrets["DB_NAME"],
         user=st.secrets["DB_USER"],
-        password=st.secrets["DB_PASSWORD"]
+        password=st.secrets["DB_PASSWORD"],
         sslmode='require'  # ← obrigatório no Supabase!
     )
 
