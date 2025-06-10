@@ -1,10 +1,11 @@
 import streamlit as st
+st.set_page_config(page_title="Gestão de Atividades CGPPI 2025", layout="wide")
+
 import psycopg2
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
-st.set_page_config(page_title="Gestão de Atividades CGPPI 2025", layout="wide") 
 # Função para conectar ao banco PostgreSQL
 def conectar():
     return psycopg2.connect(
@@ -16,7 +17,7 @@ def conectar():
         sslmode='require'
     )
 
-# Teste de conexão (exibe mensagem no topo)
+# Teste de conexão
 try:
     conn = conectar()
     st.success("✅ Conectado com sucesso ao banco de dados!")
@@ -66,7 +67,7 @@ def salvar_atividade(nome, setor_id, data_inicio, data_fim, usuario_id):
         st.error(f"Erro ao salvar atividade: {e}")
         conn.rollback()
 
-# Obter atividades (com ou sem filtro de setor)
+# Obter atividades
 def obter_atividades(setor_id=None):
     with conectar() as conn:
         with conn.cursor() as cur:
@@ -90,7 +91,6 @@ def obter_atividades(setor_id=None):
             return cur.fetchall()
 
 # Interface Streamlit
-st.set_page_config(page_title="Gestão de Atividades CGPPI 2025", layout="wide")
 st.sidebar.image("logo.png", width=200)
 st.title("Atividades CGPPI - IFGoiano - Campus Campos Belos")
 
