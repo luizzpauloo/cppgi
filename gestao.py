@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime
 
+st.set_page_config(page_title="Gestão de Atividades CGPPI 2025", layout="wide") 
 # Função para conectar ao banco PostgreSQL
 def conectar():
     return psycopg2.connect(
