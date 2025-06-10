@@ -11,6 +11,7 @@ def conectar():
         dbname=st.secrets["DB_NAME"],
         user=st.secrets["DB_USER"],
         password=st.secrets["DB_PASSWORD"]
+        sslmode='require'  # ← obrigatório no Supabase!
     )
 
 def obter_setores():
